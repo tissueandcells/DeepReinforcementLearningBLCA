@@ -29,6 +29,6 @@ The outstanding performance of GreedyQPolicy, with an average reward of 410.56 a
 
 ## Authors
 
-List of contributors to this project.
+Kevser Kübra Kırboğa
 
 
