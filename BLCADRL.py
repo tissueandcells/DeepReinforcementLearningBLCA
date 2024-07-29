@@ -40,25 +40,25 @@ from tensorflow.keras.optimizers import Adam
 import gym
 import tensorflow as tf
 
-# Rastgeleliklerin tekrar üretilebilir olması için seed belirleyin
+
 np.random.seed(42)
 tf.random.set_seed(42)
 
-# Eğitim ve test sonuçlarını toplama fonksiyonu
+
 def train_and_evaluate(model, policy, env, nb_steps=15000):
     memory = SequentialMemory(limit=50000, window_length=1)
     dqn = DQNAgent(model=model, nb_actions=env.action_space.n, memory=memory, nb_steps_warmup=10, target_model_update=1e-2, policy=policy)
     dqn.compile(Adam(learning_rate=1e-5), metrics=['mae'])
 
-    # Eğitim
+   
     history = dqn.fit(env, nb_steps=nb_steps, visualize=False, verbose=2)
 
-    # Test
+  
     test_history = dqn.test(env, nb_episodes=10, visualize=False)
 
     return history, test_history
 
-# Eğitim geçmişini görselleştirme ve tablo oluşturma fonksiyonu
+
 def plot_and_table_reward_histories(histories, policy_names, filename):
     plt.figure(figsize=(18, 6))
 
@@ -71,7 +71,7 @@ def plot_and_table_reward_histories(histories, policy_names, filename):
         average_rewards.append(np.mean(rewards))
         top3_rewards.append(sorted(rewards, reverse=True)[:3])
 
-        # En yüksek ödül noktasını bulma
+        
         max_reward_index = np.argmax(rewards)
         max_reward = rewards[max_reward_index]
         plt.scatter(max_reward_index, max_reward, s=100, facecolors='none', edgecolors='r', linewidths=2)
@@ -102,7 +102,7 @@ def plot_and_table_reward_histories(histories, policy_names, filename):
     reward_df.to_csv('reward_comparison_table.csv', index=False)
     print(reward_df)
 
-# Model oluşturma fonksiyonu
+
 def create_model(env):
     model = Sequential()
     model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
@@ -114,7 +114,7 @@ def create_model(env):
     model.add(Activation('linear'))
     return model
 
-# Farklı modeller ve politikalar ile eğitim ve test
+
 def compare_models(env, nb_steps=15000):
     policies = [
         EpsGreedyQPolicy(),
@@ -138,15 +138,15 @@ def compare_models(env, nb_steps=15000):
         history, test_history = train_and_evaluate(model, policy, env, nb_steps)
         histories.append(history)
 
-        # Test sonuçlarını yazdırma
+    
         print("Test Results:")
         for i, episode in enumerate(test_history.history['episode_reward']):
             print(f"Episode {i+1}: reward: {episode}")
 
-    # Tüm politikaların reward grafiklerini görselleştir ve kaydet, tablo oluştur
+  
     plot_and_table_reward_histories(histories, policy_names, 'training_rewards_comparison.png')
 
-# Gym ortamı oluşturma
+
 class MedicalEnv(gym.Env):
     def __init__(self, data):
         super(MedicalEnv, self).__init__()
@@ -168,11 +168,11 @@ class MedicalEnv(gym.Env):
     def render(self, mode='human'):
         pass
 
-# Veriyi yükleme ve ölçeklendirme
+
 file_path = 'clinical_data.xlsx'
 df = pd.read_excel(file_path)
 
-# Diagnoses ve Exposures sütunlarını genişletme
+
 diagnoses_df = pd.json_normalize(df['diagnoses'].apply(eval).explode())
 exposures_df = pd.json_normalize(df['exposures'].apply(eval).explode())
 
@@ -181,7 +181,7 @@ df = df.drop(columns=['diagnoses', 'exposures'])  # Eski sütunları kaldırma
 df = df.merge(diagnoses_df, left_index=True, right_index=True, suffixes=('', '_diagnosis'))
 df = df.merge(exposures_df, left_index=True, right_index=True, suffixes=('', '_exposure'))
 
-# Gerekli sütunları seçme
+
 selected_columns = [
     'case_id', 'demographic.gender', 'demographic.age_at_index',
     'ajcc_pathologic_t', 'cigarettes_per_day', 'pack_years_smoked',
@@ -190,28 +190,26 @@ selected_columns = [
 
 final_df = df[selected_columns].copy()
 
-# Kategorik verileri sayısallaştırma
 final_df['gender'] = final_df['demographic.gender'].map({'male': 1, 'female': 0})
 final_df['vital_status'] = final_df['demographic.vital_status'].map({'Alive': 1, 'Dead': 0})
 
-# Eksik verileri doldurma (örneğin ortalama ile)
+
 final_df['cigarettes_per_day'].fillna(final_df['cigarettes_per_day'].mean(), inplace=True)
 final_df['pack_years_smoked'].fillna(final_df['pack_years_smoked'].mean(), inplace=True)
 final_df['demographic.age_at_index'].fillna(final_df['demographic.age_at_index'].mean(), inplace=True)
 
-# Veriyi ölçeklendirme
+
 scaler = StandardScaler()
 scaled_data = scaler.fit_transform(final_df[['demographic.age_at_index', 'cigarettes_per_day', 'pack_years_smoked', 'gender']])
 
-# Gym ortamını oluşturma
+
 env = MedicalEnv(scaled_data)
 
-# Farklı modeller ve politikalar ile karşılaştırma
+
 compare_models(env, nb_steps=15000)
 
 pip install openpyxl
 
-# Sensitivity Analizini Uygulama
 def sensitivity_analysis(env, nb_steps=15000):
     policies = [
         EpsGreedyQPolicy(),
@@ -240,7 +238,7 @@ def sensitivity_analysis(env, nb_steps=15000):
                 model = create_model(env)
                 history, test_history = train_and_evaluate(model, policy, env, nb_steps)
 
-                # Ortalama ve en yüksek ödülleri kaydetme
+              
                 avg_reward = np.mean(history.history['episode_reward'])
                 max_reward = np.max(history.history['episode_reward'])
                 sensitivity_results.append({
@@ -251,17 +249,17 @@ def sensitivity_analysis(env, nb_steps=15000):
                     'Max Reward': max_reward
                 })
 
-                # Test sonuçlarını yazdırma
+              
                 print("Test Results:")
                 for i, episode in enumerate(test_history.history['episode_reward']):
                     print(f"Episode {i+1}: reward: {episode}")
 
-    # Sonuçları DataFrame'e dönüştürme ve CSV olarak kaydetme
+  
     sensitivity_df = pd.DataFrame(sensitivity_results)
     sensitivity_df.to_csv('sensitivity_analysis_results.csv', index=False)
     print(sensitivity_df)
 
-    # Sonuçları görselleştirme
+
     plt.figure(figsize=(18, 6))
     for policy_name in policy_names:
         subset = sensitivity_df[sensitivity_df['Policy'] == policy_name]
@@ -279,13 +277,13 @@ def sensitivity_analysis(env, nb_steps=15000):
     plt.savefig('sensitivity_analysis.png', dpi=300)
     plt.show()
 
-# Gym ortamını oluşturma
+
 class MedicalEnv(gym.Env):
     def __init__(self, data):
         super(MedicalEnv, self).__init__()
         self.data = data
         self.current_index = 0
-        self.action_space = gym.spaces.Discrete(2)  # Hayatta kalma (1) veya ölme (0)
+        self.action_space = gym.spaces.Discrete(2)  
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(4,), dtype=np.float32)
 
     def reset(self):
@@ -301,20 +299,19 @@ class MedicalEnv(gym.Env):
     def render(self, mode='human'):
         pass
 
-# Veriyi yükleme ve ölçeklendirme
+
 file_path = 'clinical_data.xlsx'
 df = pd.read_excel(file_path)
 
-# Diagnoses ve Exposures sütunlarını genişletme
 diagnoses_df = pd.json_normalize(df['diagnoses'].apply(eval).explode())
 exposures_df = pd.json_normalize(df['exposures'].apply(eval).explode())
 
-# Diagnoses DataFrame'ini orijinal DataFrame ile birleştirme
+
 df = df.drop(columns=['diagnoses', 'exposures'])  # Eski sütunları kaldırma
 df = df.merge(diagnoses_df, left_index=True, right_index=True, suffixes=('', '_diagnosis'))
 df = df.merge(exposures_df, left_index=True, right_index=True, suffixes=('', '_exposure'))
 
-# Gerekli sütunları seçme
+
 selected_columns = [
     'case_id', 'demographic.gender', 'demographic.age_at_index',
     'ajcc_pathologic_t', 'cigarettes_per_day', 'pack_years_smoked',
@@ -323,24 +320,22 @@ selected_columns = [
 
 final_df = df[selected_columns].copy()
 
-# Kategorik verileri sayısallaştırma
+
 final_df['gender'] = final_df['demographic.gender'].map({'male': 1, 'female': 0})
 final_df['vital_status'] = final_df['demographic.vital_status'].map({'Alive': 1, 'Dead': 0})
 
-# Eksik verileri doldurma (örneğin ortalama ile)
 final_df['cigarettes_per_day'].fillna(final_df['cigarettes_per_day'].mean(), inplace=True)
 final_df['pack_years_smoked'].fillna(final_df['pack_years_smoked'].mean(), inplace=True)
 final_df['demographic.age_at_index'].fillna(final_df['demographic.age_at_index'].mean(), inplace=True)
 
-# Veriyi ölçeklendirme
+
 scaler = StandardScaler()
 scaled_data = scaler.fit_transform(final_df[['demographic.age_at_index', 'cigarettes_per_day', 'pack_years_smoked', 'gender']])
 
-# Gym ortamını oluşturma
+
 env = MedicalEnv(scaled_data)
 
-# Farklı modeller ve politikalar ile karşılaştırma
+
 compare_models(env, nb_steps=15000)
 
-# Sensitivity Analizi
 sensitivity_analysis(env, nb_steps=15000)
